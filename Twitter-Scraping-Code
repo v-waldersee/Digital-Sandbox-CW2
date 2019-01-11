@@ -1,0 +1,90 @@
+#I used this code to scrape #Stansted15 tweets from Twitter, starting two hours before the protest on 11 December 2018
+
+import twitter,json,csv
+
+#I inserted my consumer keys and tokens from Twitter here
+CONSUMER_KEY = 'd5yBg41Lt6OZ9F4q0vtHdZFcJ'
+CONSUMER_SECRET = 'GpnMpeQKfTjI6HGzdFsyIITS79YTqjrZX5yMCMHJ6Za9ioHyEn'
+OAUTH_TOKEN = '2716823047-pxrXVEwCvvN1cfEFtmMQtqvbLzpoM66uisaEdEi'
+OAUTH_TOKEN_SECRET = 'HfdLZkCOthWFj9ruT1LkopADfN1Z4CDqe6Wjg8UNylLfN'
+
+auth = twitter.oauth.OAuth(OAUTH_TOKEN, OAUTH_TOKEN_SECRET,
+                           CONSUMER_KEY, CONSUMER_SECRET)
+
+twitter_api = twitter.Twitter(auth=auth)
+
+# These two lines of code instruct for a csv file with the title 'stansted15_tweets_extended_2' 
+# to be written (hence 'w') with | as a delimiter 
+csvfile = open('stansted15_tweets_extended_2.csv', 'w')
+csvwriter = csv.writer(csvfile, delimiter='|')
+
+# This function takes out characters which could break the import
+# into Excel and replaces them with spaces
+# It also sets the characters to unicode
+
+def getVal(val):
+    clean = ""
+    if val:
+        val = val.replace('|', ' ')
+        val = val.replace('\n', ' ')
+        val = val.replace('\r', ' ')
+        clean = val.encode('utf-8')
+    return clean
+
+
+#The text in 'q' is the hashtag I wanted to scrape
+q = "Stansted15"
+print 'Filtering the public timeline for track="%s"' % (q,)
+
+twitter_stream = twitter.TwitterStream(auth=twitter_api.auth)
+
+stream = twitter_stream.statuses.filter(track=q)
+
+#  Line 50 to 65 specify what information or values ('getVal') I want to scrape from Twitter
+#  It scrapes when the tweet was created, the user's name, the tweet, the user's manually entered location,
+#  the number of tweets by the user, the number of followers the user has, the number of people they follow,
+#  and when the user's account was created
+
+for tweet in stream:
+
+    if tweet['truncated']:
+        tweet_text = tweet['extended_tweet']['full_text']
+    else:
+        tweet_text = tweet['text']
+    # write the values to file
+        csvwriter.writerow([
+            tweet['created_at'],
+            getVal(tweet['user']['screen_name']),
+            getVal(tweet_text),
+            getVal(tweet['user']['location']),
+            tweet['user']['statuses_count'],
+            tweet['user']['followers_count'],
+            tweet['user']['friends_count'],
+            tweet['user']['created_at']
+            ])
+   # This writes out data which exists in a program buffer to the file, 
+   #so that if another process has the same file open, it can access the data which has just been 'flushed' to the file
+
+      csvfile.flush()
+
+    # This prints something to the screen to help us see it is working
+    print tweet['user']['screen_name'].encode('utf-8'), tweet['text'].encode('utf-8')
+    
+    
+# Because I was unable to run the process from my home computer for the necessary time period,
+# I set up the process to run on igor, using the following commands:
+ssh vwald002@igor.gold.ac.uk
+nohup python2 myscraper.py&
+# This returned a PID which I noted in a safe place. The following code then appeared on the terminal
+$ nohup: ignoring input and appending output to `nohup.out'
+# Once I was ready to terminate the process, I entered the following code, supplementing <PID> for my individual PID
+kill -9 <PID>
+
+# As I was out of the UK during the time the code was running I was unable to check whether it was functioning properly
+# When I returned to check, it had run for 3 days but then stopped
+# I also had a concurrent code running in TAGS which began two days earlier and continued until 31 December 2018
+# Because there was a considerable amount of interesting activity happening in the days after the igor process stopped running,
+# I decided to conduct my analysis on the basis of the TAGS data rather than the data on igor
+
+
+
